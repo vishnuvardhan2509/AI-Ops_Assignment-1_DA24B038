@@ -1,0 +1,55 @@
+ML Technical Debt Analysis & Mitigation Plan
+
+This document breaks down the three main issues facing our campus food-delivery recommendation model and proposes a clear, simple fix for our pipeline setup.
+
+Part 1: Identifying Technical Debt Categories
+
+(a) Rounding logic change breaks an unrelated feature
+
+Category: Entanglement (CACE: Change Anything Changes Everything)
+
+Why it happens: Machine learning models glue features together. When you change how one feature works (like rounding the delivery time), it alters how the model sees the data overall. This causes unexpected side effects in other parts of the system, like the "favorite restaurants" recommendations.
+
+(b) Marketing team silently reading raw output tables
+
+Category: Undeclared Consumers
+
+Why it happens: Outside teams start using raw model output tables without telling the ML team. This creates hidden dependencies. If the ML team updates, changes, or deletes that output table, the marketing dashboard will break without warning.
+
+(c) 14 undocumented shell scripts with no orchestration
+
+Category: Pipeline Jungles
+
+Why it happens: Stacking many loose bash/shell scripts to clean data, extract features, and train models creates a messy, fragile system. It is hard to track what script runs first, hard to debug when something breaks, and almost impossible for a new engineer to run reliably.
+
+Part 2: Proposed Solution for (c) - Fixing the Pipeline Jungle
+
+To fix the 14 undocumented shell scripts, we will replace them using DVC (Data Version Control) combined with Git and MLflow.
+
+Step-by-Step Fix:
+
+Replace Shell Scripts with DVC Pipelines (dvc.yaml)
+
+Instead of running loose scripts manually, we define each step in a single file called dvc.yaml.
+
+For every step (data cleaning, feature engineering, training), we explicitly state:
+
+Input: What data or script it needs to start.
+
+Command: What Python script to run.
+
+Output: What clean data or model file it produces.
+
+Track Data with DVC and Code with Git
+
+We store our code changes in Git.
+
+We track large datasets, feature files, and saved models using DVC (which stores the actual large files in cloud storage like AWS S3).
+
+Anyone on the team can run dvc repro to automatically rerun the entire pipeline in the correct order. DVC only reruns steps where data or code actually changed.
+
+Track Runs and Metrics using MLflow
+
+Inside our Python scripts, we add MLflow logging.
+
+Every time the pipeline runs, MLflow automatically records the parameters used, the accuracy scores, and saves the final model artifact.
